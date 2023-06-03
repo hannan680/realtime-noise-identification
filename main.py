@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 import librosa
 from pydub import AudioSegment
 import socketio
+import uvicorn
 
 
 sio = socketio.AsyncServer(async_mode='asgi')
@@ -124,3 +125,8 @@ async def disconnect(sid):
 async def my_event(sid, data):
     print('Received data:', data)
     await sio.emit('response_event', 'This is the response', room=sid)
+
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 3000))
+    uvicorn.run("main:app", host='0.0.0.0', port=port)
