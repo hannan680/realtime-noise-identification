@@ -43,9 +43,12 @@ async def ping():
     return "Hello, I am alive"
 
 
+current_dir = os.getcwd()
+print(current_dir)
+
 async def convert_audio(file: UploadFile):
     wav_path = ""
-    temp_file_path = f"./mp3/{file.filename}"
+    temp_file_path = f"{file.filename}"
     with open(temp_file_path, "wb") as temp_file:
         content = await file.read()
         temp_file.write(content)
