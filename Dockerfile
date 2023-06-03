@@ -23,7 +23,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # OK, now we pip install our requirements
 
-EXPOSE 80
 
 # Instruction informs Docker that the container listens on port 80
 
@@ -32,4 +31,4 @@ EXPOSE 80
 # We could skip this part and then type
 # python -m uvicorn main.app:app ... below
 
-CMD  uvicorn main:app --host 0.0.0.0 
+CMD  python main.py
