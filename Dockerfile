@@ -32,4 +32,4 @@ EXPOSE 80
 # We could skip this part and then type
 # python -m uvicorn main.app:app ... below
 
-CMD  uvicorn main:app --host 0.0.0.0 --port 80
+CMD  uvicorn main:app --host 0.0.0.0 
