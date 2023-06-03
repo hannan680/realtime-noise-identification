@@ -1,0 +1,12 @@
+tensorflow-cpu
+fastapi
+uvicorn
+python-multipart
+pillow
+matplotlib
+numpy
+librosa
+python-socketio
+pydub
+ffmpeg
+uvicorn[standard]
