@@ -23,9 +23,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # OK, now we pip install our requirements
 
-EXPOSE 80
 
-# Instruction informs Docker that the container listens on port 80
 
 
 # Now we just want to our WORKDIR to be /build/app for simplicity
