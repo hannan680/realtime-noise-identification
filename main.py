@@ -9,33 +9,41 @@ import librosa
 from pydub import AudioSegment
 import socketio
 import uvicorn
-
-
-sio = socketio.AsyncServer(async_mode='asgi')
-socket_app = socketio.ASGIApp(sio)
+import random
 
 
 app = FastAPI()
 
-
-
-origins = [
-    "http://localhost",
-    "http://localhost:3000",
-]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-model = tf.lite.Interpreter(model_path="./model/model.tflite")
+sio = socketio.AsyncServer(
+    async_mode='asgi', logger=True, engineio_logger=True)
+socket_app = socketio.ASGIApp(sio)
 
-classes = ["airplane",  "Baby Crying",  "bell",
-           "construction",  "engine",  "helicoptor",  "horn",]
+model = tf.lite.Interpreter(model_path="./model/advanced_model.tflite")
+
+classes = [
+    "air_conditioner",
+    "ambulance",
+    "car_horn",
+    "children_playing",
+    "dog_bark",
+    "drilling",
+    "engine_idling",
+    "firetruck",
+    "gun_shot",
+    "jackhammer",
+    "traffic",
+]
+
+# Routes.......................................................
 
 
 @app.get("/ping")
@@ -43,35 +51,60 @@ async def ping():
     return "Hello, I am alive"
 
 
-current_dir = os.getcwd()
-print(current_dir)
-
-async def convert_audio(file: UploadFile):
-    wav_path = ""
-    temp_file_path = f"{file.filename}"
-    with open(temp_file_path, "wb") as temp_file:
-        content = await file.read()
-        temp_file.write(content)
-
-    if (file.filename.split(".")[1] != 'wav'):
-        audio = AudioSegment.from_file(
-            temp_file_path, format=file.filename.split(".")[1])
-        wav_path = temp_file_path.replace(".mp4", ".wav")
-        audio.export(wav_path, format="wav")
-        os.remove(temp_file_path);
-
-    else:
-        wav_path = temp_file_path
-    return wav_path
-
-
-async def emit_prediction_event(prediction):
-    await sio.emit('prediction', prediction)
-
 @app.post("/predict")
 async def predict(
     file: UploadFile = File(...)
 ):
+    response_data = await predict_audio(file)
+
+    return JSONResponse(response_data)
+
+
+@app.post("/remote_predict")
+async def predict(
+    file: UploadFile = File(...)
+):
+    response_data = await predict_audio(file)
+    await sio.emit("prediction", response_data)
+    return JSONResponse(response_data)
+
+
+# Sockets.......................................................
+
+app.mount("/", socket_app)
+
+
+@sio.event
+async def connect(sid, environ):
+    print('Connected:', sid)
+
+
+@sio.event
+async def disconnect(sid):
+    print('Disconnected:', sid)
+
+
+@sio.event
+async def trigger(sid, data):
+    scores = []
+
+    for class_name in classes:
+        if class_name == data:
+            score = random.uniform(0.8, 1.0)
+        else:
+            score = random.uniform(0.0, 0.3)
+        scores.append(score)
+
+    response_data = {
+        "class_scores":  [scores],
+        "classes": data
+    }
+    await sio.emit("prediction", response_data)
+
+
+# Functions.......................................................
+
+async def predict_audio(file):
     print(file.filename)
     wav_file_path = await convert_audio(file)
 
@@ -98,38 +131,34 @@ async def predict(
     print(" ")
     print(" ")
     print("Class : ", classes[class_scores.argmax()])
-    os.remove(wav_file_path);
+    os.remove(wav_file_path)
 
     response_data = {
         "class_scores":  class_scores_list,
         "classes": classes[class_scores.argmax()]
     }
-    await emit_prediction_event(response_data)
 
-    return JSONResponse(response_data)
-
+    return response_data
 
 
+async def convert_audio(file: UploadFile):
+    wav_path = ""
+    temp_file_path = f"{file.filename}"
+    with open(temp_file_path, "wb") as temp_file:
+        content = await file.read()
+        temp_file.write(content)
 
-app.mount("/", socket_app)
+    if (file.filename.split(".")[1] != 'wav'):
+        audio = AudioSegment.from_file(
+            temp_file_path, format=file.filename.split(".")[1])
+        wav_path = temp_file_path.replace(".mp4", ".wav")
+        audio.export(wav_path, format="wav")
+        os.remove(temp_file_path)
 
-
-@sio.event
-async def connect(sid, environ):
-    print('Connected:', sid)
-
-
-@sio.event
-async def disconnect(sid):
-    print('Disconnected:', sid)
-
-
-@sio.event
-async def my_event(sid, data):
-    print('Received data:', data)
-    await sio.emit('response_event', 'This is the response', room=sid)
-
+    else:
+        wav_path = temp_file_path
+    return wav_path
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 3000))
-    uvicorn.run("main:app", host='0.0.0.0', port=port)
+    port = int(os.environ.get('PORT', 80))
+    uvicorn.run("main:app", host='0.0.0.0', port=port, reload='true')
