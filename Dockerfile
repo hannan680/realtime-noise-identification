@@ -1,4 +1,4 @@
-FROM python
+FROM python:3.9.16
 
 
 RUN mkdir build
@@ -23,6 +23,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # OK, now we pip install our requirements
 
+EXPOSE 80
 
 # Instruction informs Docker that the container listens on port 80
 
